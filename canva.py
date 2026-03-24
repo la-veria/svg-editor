@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtGui import QPixmap, QColor, QPainter, QPen
-from PyQt6.QtCore import Qt, QSize, QPoint
+from PyQt6.QtCore import Qt, QPoint
 
 import numpy as np
 
@@ -33,13 +33,19 @@ class CanvasLabel(QLabel):
         self.active_shape = new_shape
         self.shapes.append(new_shape)
 
+    def export_coordinates(self):
+        return list(map(lambda shape: shape.get_coordinates(), self.shapes))
+
+    def export_svg_config(self):
+        return list(map(lambda shape: shape.svg_config(), self.shapes))
+
     def mousePressEvent(self, event):
         position = event.pos()
 
         if self.active_shape:
             # check if startpoint of active_shape was clicked
             error = np.sqrt((position.x() - self.active_shape.start_point.x())**2 + (position.y() - self.active_shape.start_point.y())**2)
-            threshold = 10
+            threshold = 15
 
             if error <= threshold:
                 self.canvas = self.previousCanva.copy()

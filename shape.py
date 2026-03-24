@@ -11,5 +11,17 @@ class Shape():
     def drawShape(self, canvas, pen):      
         painter = QPainter(canvas)
         painter.setPen(pen)
-        (painter.drawPolygon if len(self.data_points) >= 3 else painter.drawPolyline)(self.data_points)
+        painter.drawPolygon(self.data_points)
         painter.end()
+
+    def get_coordinates(self):
+        return list(map(lambda i: (i.x(), i.y()), self.data_points))
+    
+    def svg_config(self):
+        args = {
+            "points": self.get_coordinates(),
+            "stroke": "black",
+            "stroke_width": 2,
+            "fill": "none"
+        }
+        return args

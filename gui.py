@@ -1,6 +1,11 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QMenuBar,QMenu
 from PyQt6.QtCore import QSize
+from PyQt6.QtGui import QAction
+
+import svgwrite
+import datetime as dt
+from pathlib import Path
 
 from canva import CanvasLabel
 
@@ -15,12 +20,49 @@ class Window(QMainWindow):
         self.setWindowTitle('Illustrator Clone')
         self.setFixedSize(canvas_size)
         self._init_canvas()
+        self._createMenuBar()
 
         self.show()
+
+    def _createMenuBar(self):
+        self._create_actions()
+
+        menuBar = QMenuBar(self)
+        menuBar = self.menuBar()
+        
+        fileMenu = QMenu("&File", self)
+        fileMenu.addAction(self.exportAction)
+
+        menuBar.addMenu(fileMenu)
+
+    def _create_actions(self):
+        self.exportAction = QAction(self)
+        self.exportAction.setText('&Export as SVG')
+        self.exportAction.triggered.connect(self.export_svg)
 
     def _init_canvas(self):
         self.label = CanvasLabel(canvas_size)
         self.setCentralWidget(self.label)
+
+    def export_svg(self):
+        shapes = self.label.export_svg_config()
+
+        timestamp = dt.datetime.now().timestamp()
+        filename = f"ic-{timestamp}.svg"
+
+        svg_document = svgwrite.Drawing(
+            filename = filename,
+            size=(canvas_size.width(), canvas_size.height()),
+        )
+
+        for config in shapes:
+            svg_document.add(
+                svg_document.polygon(**config)
+            )
+
+        svg_document.save()
+        saved_path = Path(filename).resolve()
+        print(f'svg file saved in {saved_path}')
 
     def closeEvent(self, a0):
         return super().closeEvent(a0)
