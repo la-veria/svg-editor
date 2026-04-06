@@ -1,7 +1,7 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QMenuBar,QMenu
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMenuBar, QMenu, QToolBar
 from PyQt6.QtCore import QSize
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QIcon
 
 import svgwrite
 import datetime as dt
@@ -20,12 +20,18 @@ class Window(QMainWindow):
         self.setWindowTitle('Illustrator Clone')
         self.setFixedSize(canvas_size)
         self._init_canvas()
+        self._create_actions()
         self._createMenuBar()
+        self._create_toolbar()
 
         self.show()
 
+    def _init_canvas(self):
+        self.label = CanvasLabel(canvas_size)
+        self.setCentralWidget(self.label)
+        self.mode = 'edit'
+
     def _createMenuBar(self):
-        self._create_actions()
 
         menuBar = QMenuBar(self)
         menuBar = self.menuBar()
@@ -39,10 +45,22 @@ class Window(QMainWindow):
         self.exportAction = QAction(self)
         self.exportAction.setText('&Export as SVG')
         self.exportAction.triggered.connect(self.export_svg)
+        
+        self.editMode = QAction(self)
+        self.editMode.setIcon(QIcon('./icons/pen.svg'))
+        self.editMode.triggered.connect(lambda: self.set_mode('edit'))
+        
+        self.selectMode = QAction(self)
+        self.selectMode.setIcon(QIcon('./icons/hand.svg'))
+        self.selectMode.triggered.connect(lambda: self.set_mode('select'))
 
-    def _init_canvas(self):
-        self.label = CanvasLabel(canvas_size)
-        self.setCentralWidget(self.label)
+    def _create_toolbar(self):
+        toolbar = QToolBar(self)
+
+        toolbar.addAction(self.editMode)
+        toolbar.addAction(self.selectMode)
+
+        self.addToolBar(toolbar)
 
     def export_svg(self):
         shapes = self.label.export_svg_config()
@@ -63,6 +81,9 @@ class Window(QMainWindow):
         svg_document.save()
         saved_path = Path(filename).resolve()
         print(f'svg file saved in {saved_path}')
+
+    def set_mode(self, mode):
+        print(mode)
 
     def closeEvent(self, a0):
         return super().closeEvent(a0)
