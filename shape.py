@@ -1,21 +1,11 @@
-from PyQt6.QtGui import QPainter
+from PyQt6.QtGui import QPolygon
 
-class Shape():
-    def __init__(self, start_point):
-        self.data_points = []
-        self.start_point = start_point
-
-    def addPoint(self, point):
-        self.data_points.append(point)
-
-    def drawShape(self, canvas, pen):      
-        painter = QPainter(canvas)
-        painter.setPen(pen)
-        painter.drawPolygon(self.data_points)
-        painter.end()
+class Shape(QPolygon):
+    def __init__(self, data_points=None):
+        super().__init__(data_points)
 
     def get_coordinates(self):
-        return list(map(lambda i: (i.x(), i.y()), self.data_points))
+        return list(map(lambda i: (i.x(), i.y()), self))
     
     def svg_config(self):
         args = {

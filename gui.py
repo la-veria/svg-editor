@@ -48,11 +48,11 @@ class Window(QMainWindow):
         
         self.editMode = QAction(self)
         self.editMode.setIcon(QIcon('./icons/pen.svg'))
-        self.editMode.triggered.connect(lambda: self.set_mode('edit'))
+        self.editMode.triggered.connect(lambda: self.label.change_mode('edit'))
         
         self.selectMode = QAction(self)
         self.selectMode.setIcon(QIcon('./icons/hand.svg'))
-        self.selectMode.triggered.connect(lambda: self.set_mode('select'))
+        self.selectMode.triggered.connect(lambda: self.label.change_mode('select'))
 
     def _create_toolbar(self):
         toolbar = QToolBar(self)
@@ -81,9 +81,6 @@ class Window(QMainWindow):
         svg_document.save()
         saved_path = Path(filename).resolve()
         print(f'svg file saved in {saved_path}')
-
-    def set_mode(self, mode):
-        print(mode)
 
     def closeEvent(self, a0):
         return super().closeEvent(a0)
