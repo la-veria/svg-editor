@@ -1,6 +1,6 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMenuBar, QMenu, QToolBar
-from PyQt6.QtCore import QSize
+from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QAction, QIcon
 
 import svgwrite
@@ -21,7 +21,7 @@ class Window(QMainWindow):
         self.setFixedSize(canvas_size)
         self._init_canvas()
         self._create_actions()
-        self._createMenuBar()
+        self._create_menubar()
         self._create_toolbar()
 
         self.show()
@@ -31,7 +31,7 @@ class Window(QMainWindow):
         self.setCentralWidget(self.label)
         self.mode = 'edit'
 
-    def _createMenuBar(self):
+    def _create_menubar(self):
 
         menuBar = QMenuBar(self)
         menuBar = self.menuBar()
@@ -81,6 +81,10 @@ class Window(QMainWindow):
         svg_document.save()
         saved_path = Path(filename).resolve()
         print(f'svg file saved in {saved_path}')
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Delete:
+            self.label.delete_event()
 
     def closeEvent(self, a0):
         return super().closeEvent(a0)

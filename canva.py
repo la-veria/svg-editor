@@ -17,21 +17,26 @@ class CanvasLabel(QLabel):
 
         self.setMouseTracking(True)
 
-        self.canvas = QPixmap(canvas_size)
-        self.canvas.fill(QColor('white'))
-        self.setPixmap(self.canvas)
+        self.canvas_size = canvas_size
 
+        self._init_canva()
         self._init_list()
         self._init_drawing()
+
+    def _init_canva(self):
+        self.canvas = QPixmap(self.canvas_size)
+        self.canvas.fill(QColor('white'))
+        self.setPixmap(self.canvas)
 
     def _init_list(self):
         self.current_drawing = []
         self.previousPoint = None
         self.previousCanva = self.canvas
         self.shapes = []
+        self.selected_shape = None
         self.mode = CanvaMode.EDIT
 
-    def _init_drawing(self, start_point):
+    def _init_drawing(self):
         self.pen = QPen()
         self.pen.setWidth(6)
         self.pen.setCapStyle(Qt.PenCapStyle.RoundCap)
@@ -49,6 +54,9 @@ class CanvasLabel(QLabel):
             raise TypeError('Mode is not defined')
         
         self.mode = canva_mode
+
+        # reset selection
+        self.selected_shape = None
 
     def mousePressEvent(self, event):
         position = event.pos()
@@ -79,14 +87,21 @@ class CanvasLabel(QLabel):
                 self._draw_point(position)
 
         elif self.mode == CanvaMode.SELECT:
-            selected_shape = list(filter(lambda s: s.containsPoint(position, Qt.FillRule.OddEvenFill), self.shapes))[-1]
-            print(selected_shape)
+            selected_shapes = list(filter(lambda s: s.containsPoint(position, Qt.FillRule.OddEvenFill), self.shapes))
+
+            if len(selected_shapes) > 0:
+                self.selected_shape = selected_shapes[-1]
+                print(self.selected_shape)
+            else:
+                self.selected_shape = None
 
     def _draw_polygon(self, polygon):
         painter = QPainter(self.canvas)
         painter.setPen(self.pen)
         painter.drawPolygon(polygon)
         painter.end()
+
+        self.setPixmap(self.canvas)
 
     def _draw_point(self, position):
         self.previousPoint = position
@@ -101,6 +116,10 @@ class CanvasLabel(QLabel):
         
         self.setPixmap(self.canvas)
 
+    def _draw_shapes(self):
+        for shape in self.shapes:
+            self._draw_polygon(shape)
+    
     def mouseMoveEvent(self, event):      
         if not(self.previousPoint): return
 
@@ -116,3 +135,10 @@ class CanvasLabel(QLabel):
         painter.end()
         
         self.setPixmap(self.canvas)
+
+    def delete_event(self):
+        if self.selected_shape:
+            self.shapes.remove(self.selected_shape)
+            self.selected_shape = None
+            self._init_canva()
+            self._draw_shapes()
