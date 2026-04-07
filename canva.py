@@ -41,6 +41,11 @@ class CanvasLabel(QLabel):
         self.pen.setWidth(6)
         self.pen.setCapStyle(Qt.PenCapStyle.RoundCap)
 
+        self.highlight_pen = QPen()
+        self.highlight_pen.setWidth(2)
+        self.highlight_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        self.highlight_pen.setColor(QColor('cyan'))
+
     def export_coordinates(self):
         return list(map(lambda shape: shape.get_coordinates(), self.shapes))
 
@@ -57,6 +62,7 @@ class CanvasLabel(QLabel):
 
         # reset selection
         self.selected_shape = None
+        self._draw_shapes()
 
     def mousePressEvent(self, event):
         position = event.pos()
@@ -87,17 +93,21 @@ class CanvasLabel(QLabel):
                 self._draw_point(position)
 
         elif self.mode == CanvaMode.SELECT:
+            self._draw_shapes()
             selected_shapes = list(filter(lambda s: s.containsPoint(position, Qt.FillRule.OddEvenFill), self.shapes))
 
             if len(selected_shapes) > 0:
                 self.selected_shape = selected_shapes[-1]
-                print(self.selected_shape)
+                self._draw_polygon(self.selected_shape, self.highlight_pen)
             else:
                 self.selected_shape = None
 
-    def _draw_polygon(self, polygon):
+    def _draw_polygon(self, polygon, pen = None):
+        if not pen:
+            pen = self.pen
+        
         painter = QPainter(self.canvas)
-        painter.setPen(self.pen)
+        painter.setPen(pen)
         painter.drawPolygon(polygon)
         painter.end()
 
