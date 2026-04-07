@@ -10,7 +10,7 @@ from pathlib import Path
 from canva import CanvasLabel
 
 app = QApplication(sys.argv)
-canvas_size = QSize(800, 800)
+canvas_size = QSize(600, 600)
 
 
 class Window(QMainWindow):
@@ -18,7 +18,6 @@ class Window(QMainWindow):
         super().__init__()
 
         self.setWindowTitle('Illustrator Clone')
-        self.setFixedSize(canvas_size)
         self._init_canvas()
         self._create_actions()
         self._create_menubar()
