@@ -2,6 +2,7 @@ from PyQt6.QtGui import QPolygon
 
 class Shape(QPolygon):
     def __init__(self, data_points=None):
+        self.data_points = data_points
         super().__init__(data_points)
 
     def get_coordinates(self):
