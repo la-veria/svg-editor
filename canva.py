@@ -1,17 +1,19 @@
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtGui import QPixmap, QColor, QPainter, QPen
-from PyQt6.QtCore import Qt, QPoint, QLine
-
-import numpy as np
+from PyQt6.QtCore import Qt, QPoint
 from enum import Enum
 
 from shape import Shape
 
-from maths import radius, translate
+from maths import radius, transform, translate
 
 class CanvaMode(Enum):
     EDIT = 'edit'
     SELECT ='select'
+
+class TransformationTypes(Enum):
+    TRANSLATE = 'translate'
+    STRETCH = 'stretch'
 
 class CanvasLabel(QLabel):
     # region init
@@ -55,6 +57,7 @@ class CanvasLabel(QLabel):
         self.transition_start = None
         self.transition_origin = None
         self.translated_shape = None
+        self.current_action = None
 
     # endregion init
 
@@ -69,6 +72,7 @@ class CanvasLabel(QLabel):
     # endregion svg
     
     # region draw
+
     def change_mode(self, mode):
         canva_mode = CanvaMode(mode)
 
@@ -116,6 +120,20 @@ class CanvasLabel(QLabel):
 
     # endregion draw
 
+    def _transform_shape(self, endpoint):
+        startpoint = self.transition_start
+
+        if startpoint == endpoint: return
+
+        transformed_shape = transform(self.translation_original, self.transition_origin, startpoint, endpoint)
+
+        self.shapes[self.shapes.index(self.selected_shape)] = transformed_shape
+        self.selected_shape = transformed_shape
+
+        self._init_canva()
+        self._draw_shapes()
+
+
     def _translate_shape(self, endpoint):
         startpoint = self.transition_start
 
@@ -124,7 +142,6 @@ class CanvasLabel(QLabel):
         self.translated_shape = translate(self.translation_original, startpoint, endpoint)
 
         self.shapes[self.shapes.index(self.selected_shape)] = self.translated_shape
-
         self.selected_shape = self.translated_shape
 
         self._init_canva()
@@ -158,26 +175,60 @@ class CanvasLabel(QLabel):
             else:
                 self._draw_point(position)
 
-        elif self.mode == CanvaMode.SELECT:          
-            self._draw_shapes()
-            self._init_transformation()
+        elif self.mode == CanvaMode.SELECT:           
+            selected_shape = next(iter([s for s in self.shapes if s.containsPoint(position, Qt.FillRule.OddEvenFill)]), None)
 
-            # check if the click was within a shape, choose most recent shape
-            selected_shapes = list(filter(lambda s: s.containsPoint(position, Qt.FillRule.OddEvenFill), self.shapes))
-            if len(selected_shapes) > 0:
-                self.selected_shape = selected_shapes[-1]
+            if self.selected_shape:
+                # check if a selected shape allready exists
+
+                corners = self.selected_shape.data_points
+                selected_corner = next(iter([c for c in corners if radius(c, position) <= self.threshold]), None)
+
+                if selected_corner:
+                    # check if click is on corner of selected shape => stretch
+
+                    self.current_action = TransformationTypes.STRETCH
+                    self.transition_start = selected_corner
+                    self.transition_origin = self.translation_original.boundingRect().center()
+
+                    painter = QPainter(self.canvas)
+                    painter.setPen(self.pen)
+                    painter.drawPoint(self.transition_origin)
+                    painter.end()
+
+                    self.setPixmap(self.canvas)
+
+                    print('stretch start')
+                    return
+            
+                elif self.selected_shape == selected_shape:
+                    # check if click is within selected shape => translate
+
+                    self.current_action = TransformationTypes.TRANSLATE
+                    self.transition_start = position
+                    print('translation start')
+                    return
+
+                else:
+                    # check if click is outside the selected shape => deactivate transformation
+
+                    self.selected_shape = None
+                    self._init_transformation()
+                    self._draw_shapes()
+
+
+            if selected_shape:
+                # check if a new shape is selected => activate shape
+
+                self.selected_shape = selected_shape
                 self._draw_polygon(self.selected_shape, self.highlight_pen)
-                self.transition_start = position
                 self.translation_original = self.selected_shape
-
-            else:
-                self.selected_shape = None
     
     def mouseMoveEvent(self, event):
+        position = event.pos()
+
         if self.mode == CanvaMode.EDIT:
             if not(self.previousPoint): return
-
-            position = event.pos()
 
             self.canvas = self.previousCanva.copy()
 
@@ -191,15 +242,18 @@ class CanvasLabel(QLabel):
             self.setPixmap(self.canvas)
 
         elif self.mode == CanvaMode.SELECT:
-            if not self.transition_start: return
+            if self.current_action == TransformationTypes.TRANSLATE:
+                self._translate_shape(position)
 
-            self._translate_shape(event.pos())
+            elif self.current_action == TransformationTypes.STRETCH:
+                self._transform_shape(position)
 
 
     def mouseReleaseEvent(self, event):
-        if not self.transition_start: return
+        if self.current_action:
+            # reset transformed shape to original
 
-        if self.translated_shape:
+            self.translation_original = self.selected_shape
             self._draw_polygon(self.selected_shape, self.highlight_pen)
 
     def delete_event(self):
