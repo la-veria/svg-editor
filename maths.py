@@ -30,14 +30,10 @@ def transformation_vector(origin, startpoint, endpoint):
     T = translation_matrix(-origin)
     P = T @ M
 
-    o2 = P[:2, [0]]
     s2 = P[:2, [1]]
     e2 = P[:2, [2]]
 
-    vn = e2 - o2
-    vo = s2 - o2
-
-    s = vn / vo
+    s = e2 / s2
 
     return s
 

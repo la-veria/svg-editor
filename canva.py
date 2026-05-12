@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtGui import QPixmap, QColor, QPainter, QPen
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt, QPoint, QRect, QSize
 from enum import Enum
 
 from shape import Shape
@@ -48,7 +48,7 @@ class CanvasLabel(QLabel):
         self.pen.setCapStyle(Qt.PenCapStyle.RoundCap)
 
         self.highlight_pen = QPen()
-        self.highlight_pen.setWidth(2)
+        self.highlight_pen.setWidth(1)
         self.highlight_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         self.highlight_pen.setColor(QColor('cyan'))
 
@@ -83,6 +83,7 @@ class CanvasLabel(QLabel):
 
         # reset selection
         self._init_transformation()
+        self._init_canva()
         self._draw_shapes()
 
         if self.mode == CanvaMode.EDIT:
@@ -97,6 +98,25 @@ class CanvasLabel(QLabel):
         painter = QPainter(self.canvas)
         painter.setPen(pen)
         painter.drawPolygon(polygon)
+        painter.end()
+
+        self.setPixmap(self.canvas)
+
+    def _draw_selected(self, shape:Shape):
+        self._draw_polygon(self.selected_shape, self.highlight_pen)
+
+        br = shape.boundingRect()
+        corners = shape.get_bounding_rect_corners()
+        
+        painter = QPainter(self.canvas)
+        painter.setPen(self.highlight_pen)
+        painter.drawRect(br)
+
+        painter.setBrush(QColor('white'))
+        for c in corners:
+            c -= QPoint(4, 4)
+            painter.drawRect(QRect(c, QSize(8, 8)))
+
         painter.end()
 
         self.setPixmap(self.canvas)
@@ -120,6 +140,8 @@ class CanvasLabel(QLabel):
 
     # endregion draw
 
+    # region transform
+    
     def _transform_shape(self, endpoint):
         startpoint = self.transition_start
 
@@ -132,7 +154,7 @@ class CanvasLabel(QLabel):
 
         self._init_canva()
         self._draw_shapes()
-
+        self._draw_selected(self.selected_shape)
 
     def _translate_shape(self, endpoint):
         startpoint = self.transition_start
@@ -146,6 +168,9 @@ class CanvasLabel(QLabel):
 
         self._init_canva()
         self._draw_shapes()
+        self._draw_selected(self.selected_shape)
+   
+    # endregion transform
 
     # region events
 
@@ -181,19 +206,28 @@ class CanvasLabel(QLabel):
             if self.selected_shape:
                 # check if a selected shape allready exists
 
-                corners = self.selected_shape.data_points
+                corners = self.selected_shape.get_bounding_rect_corners()
                 selected_corner = next(iter([c for c in corners if radius(c, position) <= self.threshold]), None)
 
                 if selected_corner:
-                    # check if click is on corner of selected shape => stretch
+                    # check if click is on corner of bounding rect => stretch
 
                     self.current_action = TransformationTypes.STRETCH
                     self.transition_start = selected_corner
-                    self.transition_origin = self.translation_original.boundingRect().center()
+
+                    # origin is opposite corner
+                    br = self.translation_original.boundingRect()
+                    if selected_corner == br.topLeft():
+                        self.transition_origin = br.bottomRight()
+                    elif selected_corner == br.topRight():
+                        self.transition_origin = br.bottomLeft()
+                    elif selected_corner == br.bottomLeft():
+                        self.transition_origin = br.topRight()
+                    else:
+                        self.transition_origin = br.topLeft()
 
                     painter = QPainter(self.canvas)
                     painter.setPen(self.pen)
-                    painter.drawPoint(self.transition_origin)
                     painter.end()
 
                     self.setPixmap(self.canvas)
@@ -214,6 +248,7 @@ class CanvasLabel(QLabel):
 
                     self.selected_shape = None
                     self._init_transformation()
+                    self._init_canva()
                     self._draw_shapes()
 
 
@@ -221,7 +256,8 @@ class CanvasLabel(QLabel):
                 # check if a new shape is selected => activate shape
 
                 self.selected_shape = selected_shape
-                self._draw_polygon(self.selected_shape, self.highlight_pen)
+
+                self._draw_selected(self.selected_shape)
                 self.translation_original = self.selected_shape
     
     def mouseMoveEvent(self, event):
@@ -248,13 +284,12 @@ class CanvasLabel(QLabel):
             elif self.current_action == TransformationTypes.STRETCH:
                 self._transform_shape(position)
 
-
     def mouseReleaseEvent(self, event):
         if self.current_action:
             # reset transformed shape to original
 
             self.translation_original = self.selected_shape
-            self._draw_polygon(self.selected_shape, self.highlight_pen)
+            self._draw_selected(self.selected_shape)
 
     def delete_event(self):
         if self.selected_shape:

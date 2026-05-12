@@ -8,6 +8,10 @@ class Shape(QPolygon):
     def get_coordinates(self):
         return list(map(lambda i: (i.x(), i.y()), self))
     
+    def get_bounding_rect_corners(self):
+        br = self.boundingRect()
+        return [br.topLeft(), br.topRight(), br.bottomLeft(), br.bottomRight()]
+  
     def svg_config(self):
         args = {
             "points": self.get_coordinates(),
